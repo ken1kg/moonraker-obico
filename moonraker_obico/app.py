@@ -387,7 +387,7 @@ class App(object):
         cur_display_status = data['status'].get('display_status', {})
         display_status_changed = prev_display_status != cur_display_status
 
-        # Nothing critical has changed. Can be skipped so that it won't bombard the server unless display_status changes for faster UI update
+        # If nothing critical has changed, it can be skipped so that it won't bombard the server unless display_status changes for faster UI update
         self.server_conn.post_status_update_to_server(is_critical=display_status_changed)
 
     def process_server_msg(self, msg):
