@@ -165,6 +165,7 @@ class PrinterState:
             has_error = self.status.get('print_stats', {}).get('state', '') == 'error'
             fan = self.status.get('fan') or dict()
             gcode_move = self.status.get('gcode_move') or dict()
+            display_status = self.status.get('display_status') or dict()
 
             temps = {}
             for heater in self.app_config.all_mr_heaters():
@@ -235,7 +236,9 @@ class PrinterState:
                 'currentFeedRate': gcode_move.get('speed_factor'),
                 'currentFlowRate': gcode_move.get('extrude_factor'),
                 'currentFanSpeed': fan.get('speed'),
-                'currentZ': current_z
+                'currentZ': current_z,
+                'display_status': display_status
+
             }
 
     def get_z_info(self):
