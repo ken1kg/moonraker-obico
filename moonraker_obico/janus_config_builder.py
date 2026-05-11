@@ -98,7 +98,7 @@ def find_system_janus_paths():
     return (janus_path, janus_lib_path)
 
 
-def build_janus_jcfg(auth_token):
+def build_janus_jcfg(auth_token, turn_config=None):
     janus_jcfg_path = "{etc_dir}/janus.jcfg".format(etc_dir=RUNTIME_JANUS_ETC_DIR)
 
     ld_lib_path = None
@@ -117,6 +117,28 @@ def build_janus_jcfg(auth_token):
     if not janus_bin_path or not folder_section:
         return (None, None)
 
+    # --- TURN CONFIGURATION LOGIC ---
+    # Defaults (Obico Cloud)
+    turn_server = "turn.obico.io"
+    turn_port = 80
+    turn_type = "tcp"
+    turn_user = auth_token
+    turn_pwd = auth_token
+
+    # Override with custom TURN server if configured
+    if turn_config and turn_config.host:
+        turn_server = turn_config.host
+        turn_port = turn_config.port
+        turn_type = "udp"  # Standard TURN servers usually prefer UDP
+        if turn_config.username and turn_config.password:
+            turn_user = turn_config.username
+            turn_pwd = turn_config.password
+            _logger.info(f"Using Custom TURN (Static Auth): {turn_server}:{turn_port}")
+        else:
+            _logger.warning("Custom TURN server specified but no username/password provided. Connection may fail.")
+    else:
+        _logger.info("Using Default Obico TURN Server")
+
     with open(janus_jcfg_path, 'w') as f:
         f.write("""
 general: {
@@ -128,12 +150,18 @@ general: {
         admin_secret = "janusoverlord"  # String that all Janus requests must contain
 }}
 nat: {{
-        turn_server = "turn.obico.io"
-        turn_port = 80
-        turn_type = "tcp"
-        turn_user = "{auth_token}"
-        turn_pwd = "{auth_token}"
-""".format(auth_token=auth_token))
+        turn_server = "{turn_server}"
+        turn_port = {turn_port}
+        turn_type = "{turn_type}"
+        turn_user = "{turn_user}"
+        turn_pwd = "{turn_pwd}"
+""".format(
+    turn_server=turn_server,
+    turn_port=turn_port,
+    turn_type=turn_type,
+    turn_user=turn_user,
+    turn_pwd=turn_pwd
+))
 
         f.write("""
         ice_ignore_list = "vmnet"
@@ -318,7 +346,7 @@ certificates: {{
 """.format(ws_port=ws_port, admin_ws_port=admin_ws_port))
 
 
-def build_janus_config(webcams, printer_auth_token, ws_port, admin_ws_port):
+def build_janus_config(webcams, printer_auth_token, ws_port, admin_ws_port, turn_config=None):
     if not os.path.exists(RUNTIME_JANUS_ETC_DIR):
         os.makedirs(RUNTIME_JANUS_ETC_DIR)
 
@@ -330,7 +358,7 @@ def build_janus_config(webcams, printer_auth_token, ws_port, admin_ws_port):
         except Exception:
             pass
 
-    (janus_bin_path, ld_lib_path) = build_janus_jcfg(printer_auth_token)
+    (janus_bin_path, ld_lib_path) = build_janus_jcfg(printer_auth_token, turn_config)
     _logger.info('janus_bin_path: {janus_bin_path} - ld_lib_path: {ld_lib_path}'.format(janus_bin_path=janus_bin_path, ld_lib_path=ld_lib_path))
     build_janus_plugin_streaming_jcfg(webcams)
     build_janus_transport_websocket_jcfg(ws_port, admin_ws_port)

@@ -64,6 +64,14 @@ class TunnelConfig:
 
 
 @dataclasses.dataclass
+class TurnConfig:
+    host: Optional[str] = None
+    port: int = 80
+    username: Optional[str] = None
+    password: Optional[str] = None
+
+
+@dataclasses.dataclass
 class WebcamConfig:
 
     def __init__(self, webcam_config_section, is_primary_camera):
@@ -268,6 +276,13 @@ class Config:
             ),
             dest_is_ssl=dest_is_ssl,
             url_blacklist=[],
+        )
+
+        self.turn = TurnConfig(
+            host=config.get('turn', 'server', fallback=config.get('turn', 'host', fallback=None)),
+            port=config.getint('turn', 'port', fallback=80),
+            username=config.get('turn', 'username', fallback=None),
+            password=config.get('turn', 'password', fallback=None),
         )
 
         self.webcams = []
